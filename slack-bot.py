@@ -1,18 +1,47 @@
 import os
 import time
 import re
+from operator import itemgetter
 from slackclient import SlackClient
-
+import conf
+from tweepy import API
+from tweepy import OAuthHandler
+import json
 
 # instantiate Slack client
-slack_client = SlackClient(os.environ.get('SLACK_BOT_TOKEN'))
+slack_client = SlackClient(conf.SLACK_BOT_TOKEN)
 # starterbot's user ID in Slack: value is assigned after the bot starts up
 starterbot_id = None
 
 # constants
 RTM_READ_DELAY = 1 # 1 second delay between reading from RTM
-EXAMPLE_COMMAND = "do"
+EXAMPLE_COMMAND = "topsy"
 MENTION_REGEX = "^<@(|[WU].+?)>(.*)"
+
+auth = OAuthHandler(conf.CONSUMER_KEY,conf.CONSUMER_SECRET)
+auth.set_access_token(conf.ACCESS_TOKEN,conf.ACCESS_SECRET)
+api = API(auth)
+
+def call_top():
+    top_tweets = api.trends_place(1)
+    new_tweets = json.dumps(top_tweets, indent=4, sort_keys=True)
+    new_tweets = json.loads(new_tweets)
+    tweet_dict = new_tweets[0]
+
+    top = tweet_dict['trends']
+
+    sorted_tweets = sorted(top, key=itemgetter('tweet_volume'), reverse=True)
+    tmpList = []
+
+    ctr = 0
+
+    while ctr < 10:
+        tmpList.append(sorted_tweets[ctr]['name'])
+        ctr += 1
+
+    response = "\n".join(tmpList)
+    return response
+
 
 def parse_bot_commands(slack_events):
     """
@@ -47,7 +76,7 @@ def handle_command(command, channel):
     response = None
     # This is where you start to implement more commands!
     if command.startswith(EXAMPLE_COMMAND):
-        response = "Sure...write some more code then I can do that!"
+        response = call_top()
 
     # Sends the response back to the channel
     slack_client.api_call(
