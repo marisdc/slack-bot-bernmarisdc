@@ -100,7 +100,7 @@ if __name__ == "__main__":
         print("Starter Bot connected and running!")
         # Read bot's user ID by calling Web API method `auth.test`
         starterbot_id = slack_client.api_call("auth.test")["user_id"]
-        schedule.every().day.at('12:00').do(call_top)
+        schedule.every(10).minutes.do(call_top)
         while True:
             schedule.run_pending()
             time.sleep(RTM_READ_DELAY)
