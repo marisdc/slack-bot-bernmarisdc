@@ -1,4 +1,3 @@
-import os
 import time
 import re
 from operator import itemgetter
@@ -7,6 +6,7 @@ import conf
 from tweepy import API
 from tweepy import OAuthHandler
 import json
+import schedule
 
 # instantiate Slack client
 slack_client = SlackClient(conf.SLACK_BOT_TOKEN)
@@ -22,7 +22,7 @@ auth = OAuthHandler(conf.CONSUMER_KEY,conf.CONSUMER_SECRET)
 auth.set_access_token(conf.ACCESS_TOKEN,conf.ACCESS_SECRET)
 api = API(auth)
 
-def call_top():
+def call_top(sched='True'):
     top_tweets = api.trends_place(1)
     new_tweets = json.dumps(top_tweets, indent=4, sort_keys=True)
     new_tweets = json.loads(new_tweets)
@@ -40,7 +40,17 @@ def call_top():
         ctr += 1
 
     response = "\n".join(tmpList)
-    return response
+
+
+    if sched:
+        slack_client.api_call(
+        "chat.postMessage",
+        channel='assignment1',
+        text=response
+    )
+    else:
+         return response
+
 
 
 def parse_bot_commands(slack_events):
@@ -90,7 +100,10 @@ if __name__ == "__main__":
         print("Starter Bot connected and running!")
         # Read bot's user ID by calling Web API method `auth.test`
         starterbot_id = slack_client.api_call("auth.test")["user_id"]
+        schedule.every().day.at('12:00').do(call_top)
         while True:
+            schedule.run_pending()
+            time.sleep(RTM_READ_DELAY)
             command, channel = parse_bot_commands(slack_client.rtm_read())
             if command:
                 handle_command(command, channel)
